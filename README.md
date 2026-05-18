@@ -1,25 +1,25 @@
 # GEE-CloudBased-updated-
 
-# Google Earth Engine Land Surface Temperature Web Application
 This repository contains the complete Google Earth Engine (GEE) JavaScript codebase developed for processing and visualizing spatial thermal dynamics across user-defined Areas of Interest (AOIs).
 
 ## Project Overview
 Use `##` for section headings to divide major project criteria components. 
+
 This application automates the generation of Land Surface Temperature (LST) profiles utilizing thermal bands from Landsat 8 missions, presenting an interactive user environment.
 
 ### Author Information
 Use `###` for smaller sub-headings.
-* **Student Name:** [Kris Dragovic]
-* **Student ID:** [s4003055]
+- **Student Name:** Kris Dragovic
+- **Student ID:** s4003055
 
 ---
 
 ## App Functionality
 
 ### Core Application Components:
-- **Header Panel:** Displays student verification metadata along with an application workflow summary overview.
-- **Interactive Button Elements:** Houses dropdown interactive selection menus and triggering action components.
-- **Map Panel:** Renders background geographical frameworks and updates spatial layers conditionally based on runtime state queries.
+* **Header Panel:** Displays student verification metadata along with an application workflow summary overview.
+* **Interactive Button Elements:** Houses dropdown interactive selection menus and triggering action components.
+* **Map Panel:** Renders background geographical frameworks and updates spatial layers conditionally based on runtime state queries.
 
 ### Project Steps:
 1. Initialize Earth Engine Client instance environment interface.
@@ -45,7 +45,7 @@ You can also combine **bold and _italic_** formatting styles inside evaluation m
 ## Code Blocks
 Inline syntax references like `ui.Panel()` define element spatial alignment parameters.
 
-Block of code sample context:
+Block of code:
 ```javascript
 // GEE Code initialization verification step
 var greeting = 'Google Earth Engine UI Application Initialized';
