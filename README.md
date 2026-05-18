@@ -5,7 +5,7 @@ This repository contains the complete Google Earth Engine (GEE) JavaScript codeb
 ## Project Overview
 Use `##` for section headings to divide major project criteria components. 
 
-This application automates the generation of Land Surface Temperature (LST) profiles utilizing thermal bands from Landsat 8 missions, presenting an interactive user environment.
+This application automates the generation of Land Surface Temperature (LST) profiles utilizing thermal bands from Aqua MODIS missions, presenting an interactive user environment centered over the Melbourne metropolitan region.
 
 ### Author Information
 Use `###` for smaller sub-headings.
@@ -22,9 +22,11 @@ Use `###` for smaller sub-headings.
 * **Map Panel:** Renders background geographical frameworks and updates spatial layers conditionally based on runtime state queries.
 
 ### Project Steps:
-1. Initialize Earth Engine Client instance environment interface.
-2. Formulate regional boundary bounding criteria masks.
-3. Compute Top of Atmosphere (TOA) thermal values to Celsius metric layers.
+1. Find and load the dataset "MYD11A2.061 Aqua Land Surface Temperature".
+2. Inspect the dataset attributes and isolate the day land surface temperature band (`LST_Day_1km`).
+3. Filter by date range and isolate the chosen Region of Interest (ROI) for Melbourne.
+4. Convert raw data values to Celsius using scaling variables and compute a median composite.
+5. Build an interactive user interface (UI) to dynamically trigger and view changes on the Map canvas.
 
 ---
 
@@ -44,6 +46,12 @@ You can also combine **bold and _italic_** formatting styles inside evaluation m
 
 ## Code Blocks
 Inline syntax references like `ui.Panel()` define element spatial alignment parameters.
+
+Block of code:
+```javascript
+// GEE Code initialization verification step
+var greeting = 'Google Earth Engine UI Application Initialized';
+print(greeting);
 
 Block of code:
 ```javascript
