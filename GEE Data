@@ -1,170 +1,103 @@
-// Create a main panel for the sidebar controls
 var sidebar = ui.Panel({
   layout: ui.Panel.Layout.flow('vertical'),
   style: {
-    width: '320px',
+    width: '340px',
     padding: '15px',
-    backgroundColor: '#f8f9fa',
-    border: '1px solid #dcdcdc'
+    backgroundColor: '#fdfdfd',
+    border: '1px solid #e0e0e0'
   }
 });
 
-// Main App Title (H1 equivalent)
 var titleLabel = ui.Label({
-  value: 'LST Analysis Application',
-  style: {
-    fontSize: '20px',
-    fontWeight: 'bold',
-    margin: '0 0 5px 0',
-    color: '#2c3e50'
-  }
+  value: 'Melbourne LST Analysis App',
+  style: { fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#1a252f' }
 });
 
-// Student Information Short Description (REQUIRED)
 var studentInfoLabel = ui.Label({
-  value: 'Submitted by: [Kris Dragovic] | Student ID: [s4003055]',
-  style: {
-    fontSize: '13px',
-    fontStyle: 'italic',
-    margin: '0 0 15px 0',
-    color: '#7f8c8d'
-  }
+  value: 'Submitted by: Kris Dragovic | Student ID: s4003055',
+  style: { fontSize: '13px', fontStyle: 'italic', margin: '0 0 15px 0', color: '#7f8c8d' }
 });
 
-// App description
 var descLabel = ui.Label({
-  value: 'Select a region of interest (AOI) below to dynamically compute and visualize Land Surface Temperature (LST) derived from Landsat 8 data.',
-  style: {
-    fontSize: '12px',
-    margin: '0 0 20px 0',
-    color: '#34495e'
-  }
+  value: 'An interactive application designed to calculate and display a median composite of Aqua Land Surface Temperature (MYD11A2.061) over Melbourne.',
+  style: { fontSize: '12px', margin: '0 0 20px 0', color: '#34495e' }
 });
 
-// Add headers to sidebar
-sidebar.add(titleLabel);
-sidebar.add(studentInfoLabel);
-sidebar.add(descLabel);
-
+sidebar.add(titleLabel).add(studentInfoLabel).add(descLabel);
 
 // --- 2. REGION SELECTOR & INTERACTIVE BUTTONS ---
-
-// Define sample Areas of Interest (AOIs) globally
-var aois = {
-  'New York City': ee.Geometry.Point([-74.0060, 40.7128]).buffer(20000),
-  'London': ee.Geometry.Point([-0.1278, 51.5074]).buffer(20000),
-  'Tokyo': ee.Geometry.Point([139.6503, 35.6762]).buffer(20000),
-  'Sydney': ee.Geometry.Point([151.2093, -33.8688]).buffer(20000)
-};
-
-// Dropdown (Select menu) for selecting a region
 var regionSelect = ui.Select({
-  items: Object.keys(aois),
-  placeholder: 'Choose a region...',
+  items: ['Melbourne Boundary'],
+  value: 'Melbourne Boundary',
   style: { width: '100%', margin: '0 0 10px 0' }
 });
 
-sidebar.add(ui.Label('1. Select Region of Interest (AOI):', {fontWeight: 'bold', fontSize: '14px'}));
+sidebar.add(ui.Label('1. Region of Interest (ROI):', {fontWeight: 'bold', fontSize: '14px'}));
 sidebar.add(regionSelect);
 
-// Interactive Action Button to execute calculations
 var runButton = ui.Button({
-  label: 'Calculate & Export LST Data',
+  label: 'Calculate LST & Refresh Map',
   style: { width: '100%', margin: '10px 0', fontWeight: 'bold' }
 });
-
 sidebar.add(runButton);
 
-// Text area to show processing status or data download link
 var statusLabel = ui.Label({
-  value: 'Status: Awaiting user selection.',
-  style: { fontSize: '12px', color: '#e67e22', margin: '10px 0' }
+  value: 'Status: Ready to process.',
+  style: { fontSize: '12px', color: '#27ae60', margin: '10px 0' }
 });
 sidebar.add(statusLabel);
 
-// Add the configured sidebar panel to the root UI
 ui.root.insert(0, sidebar);
 
-
-// --- 3. LST CALCULATION LOGIC ---
-
-// Visualization parameters for the LST thermal layer (Celsius)
+// --- 3. DATASET FILTERING & LST CALCULATION LOGIC ---
+// Visual palette for thermal mapping
 var lstVis = {
-  min: 15,
-  max: 45,
-  palette: [
-    'blue', 'cyan', 'green', 'yellow', 'orange', 'red'
-  ]
+  min: 10,
+  max: 40,
+  palette: ['blue', 'cyan', 'green', 'yellow', 'orange', 'red']
 };
 
-// Function to compute LST for a chosen geometry using Landsat 8 Top of Atmosphere (TOA)
-function computeLST(geometry) {
-  // Filter Landsat 8 collection to the target area during summer months
-  var collection = ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')
-    .filterBounds(geometry)
-    .filterDate('2023-01-01', '2023-12-31')
-    .filter(ee.Filter.lt('CLOUD_COVER', 15));
+// Target Location: Melbourne coordinates
+var melbourneGeometry = ee.Geometry.Polygon([
+  [[144.5, -38.2], [145.5, -38.2], [145.5, -37.5], [144.5, -37.5]]
+]);
+
+function processMelbourneLST() {
+  statusLabel.setValue('Fetching Aqua MODIS Dataset...');
+  
+  // i, iii, iv. Load Aqua 8-Day Global 1km and select Day Land Surface Temperature band
+  var dataset = ee.ImageCollection('MODIS/061/MYD11A2')
+    .filterBounds(melbourneGeometry)
+    .filterDate('2020-01-01', '2020-12-31') // Adjust to your preferred time window
+    .select('LST_Day_1km');
     
-  if (collection.size().getInfo() === 0) {
-    return null;
-  }
+  // vi. Convert raw values to Celsius and compute median composite
+  // MODIS LST digital numbers must be multiplied by a scale factor of 0.02, then subtract 273.15
+  var medianLST = dataset.median().clip(melbourneGeometry);
+  var lstCelsius = medianLST.multiply(0.02).subtract(273.15).rename('LST_Celsius');
   
-  // Median composite to create a cloud-free single image base
-  var image = collection.median();
-  
-  // Landsat 8 Band 10 is Thermal Infrared 1 (TIR-1).
-  // Formula to convert TOA Brightness Temperature from Kelvin to Celsius: C = K - 273.15
-  var thermalBand = image.select('B10');
-  var lstCelsius = thermalBand.subtract(273.15).rename('LST_Celsius');
-  
-  return lstCelsius.clip(geometry);
+  return lstCelsius;
 }
 
+// --- 4. MAP UTILITIES & FRONTEND EVENT HANDLER ---
+Map.centerObject(melbourneGeometry, 9);
 
-// --- 4. MAP UTILITIES & ACTION TRIGGER ---
-
-// Set up default map behavior
-Map.setControlVisibility({all: true});
-Map.style().set('cursor', 'crosshair');
-
-// Define click trigger on the interactive button
 runButton.onClick(function() {
-  var selectedRegion = regionSelect.getValue();
+  statusLabel.setValue('Computing median composite...');
   
-  if (!selectedRegion) {
-    statusLabel.setValue('Error: Please select a valid region first!');
-    return;
-  }
+  // vii. Visualize results on the map panel
+  var finalLayer = processMelbourneLST();
   
-  statusLabel.setValue('Processing calculation... please wait.');
+  Map.layers().reset();
+  Map.addLayer(finalLayer, lstVis, 'Melbourne Median LST (Celsius) - 2020');
   
-  var geometry = aois[selectedRegion];
+  // Data exporter link generation
+  var downloadUrl = finalLayer.getDownloadURL({
+    name: 'Melbourne_LST_MODIS',
+    scale: 1000,
+    region: melbourneGeometry
+  });
   
-  // Center map dynamically onto the chosen AOI
-  Map.centerObject(geometry, 11);
-  
-  // Calculate LST layer
-  var lstLayer = computeLST(geometry);
-  
-  if (lstLayer) {
-    // Clear any previous layers to prevent overlap stack cluttering
-    Map.layers().reset();
-    
-    // Add calculated layer to Map panel
-    Map.addLayer(lstLayer, lstVis, 'Land Surface Temperature (Celsius) - ' + selectedRegion);
-    
-    // Generate a static download URL to simulate data exporter requirement
-    var downloadUrl = lstLayer.getDownloadURL({
-      name: 'LST_' + selectedRegion.replace(' ', '_'),
-      scale: 30,
-      region: geometry.bounds()
-    });
-    
-    statusLabel.setValue('Success! Map updated.');
-    
-    // Provide user with data exporter text link
-    print('Download link for ' + selectedRegion + ' GeoTIFF:', downloadUrl);
-  } else {
-    statusLabel.setValue('Error: No clear satellite data found for this region.');
-  }
+  statusLabel.setValue('Success! Map updated.');
+  print('Data Exporter Link (GeoTIFF):', downloadUrl);
 });
